@@ -1,0 +1,97 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch-discernai
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      # Wait for ES to be reachable & at least yellow status
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=1s >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana-discernai
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_PUBLICBASEURL=http://localhost:5601
+    ports:
+      - "5601:5601"
+
+  mongodb:
+    image: mongo:6.0
+    container_name: mongo-discern
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      # Basic ping using mongosh
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: discern-api
+    restart: unless-stopped
+    volumes:
+      - ./api:/app/api
+      - ./crew:/app/crew
+      - ./elastic:/app/elastic
+    env_file:
+      - ./.env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - ELASTIC_HOST=http://elasticsearch:9200
+      - JWT_ALGORITHM=HS256
+    ports:
+      - "8000:8000"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  loader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: discern-loader
+    restart: "no"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./elastic:/app/elastic            # the loader script(s)
+      - ./seed_data:/app/seed_data:ro     # your actual JSONL files
+    environment:
+      - ELASTIC_HOST=http://elasticsearch:9200
+      - ELASTIC_INDEX=bible_verses
+      - DATA_DIR=/app/seed_data
+    command: ["python", "/app/elastic/ensure_and_load_bible.py"]
+
+volumes:
+  esdata:
+  mongo_data:

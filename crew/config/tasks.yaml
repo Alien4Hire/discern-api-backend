@@ -1,0 +1,148 @@
+# 1) Router (Phase 1)
+route_intent_task:
+  description: >
+    Decide primary intent for the latest user prompt with context:
+    {"teaching" | "pastoral" | "assurance" | "doubt_lament"}.
+    Include urgency (low/medium/high) and desired length ("short"|"standard").
+  expected_output: |
+    {"primary_intent":"teaching","secondary_intent":"","urgency":"low","length":"standard","notes":"why this mapping fits"}
+  agent: intent_router
+
+# (Optional) You can still keep these for future multi-step pipelines
+gather_scripture_task:
+  description: >
+    Propose 3–6 passages with 1-line “why it fits”. Quote only if wording is crucial.
+  expected_output: |
+    {"passages":[{"ref":"Genesis 1:1–2:3","why":"creation pattern & divine ordering"}],
+     "quotes":[{"ref":"Psalm 34:18","text":"The LORD is close to the brokenhearted..."}]}
+  agent: scripture_retriever
+
+teach_answer_task:
+  description: >
+    For doctrinal/FAQ prompts. Answer clearly using provided passages, connecting to the storyline of Scripture.
+    Offer 1–2 “further study” refs. Avoid speculation.
+  expected_output: "Pastorally warm teaching answer with inline references."
+  agent: doctrine_teacher
+
+pastoral_answer_task:
+  description: >
+    For crisis/guidance. Brief validation → Scripture → 2–4 concrete steps.
+  expected_output: "Short pastoral counsel with references and next steps."
+  agent: pastoral_counselor
+
+assurance_answer_task:
+  description: >
+    Salvation/assurance. Explain gospel, respond to concern, invite response, urge church connection. Include 3–4 anchors.
+  expected_output: "Concise assurance guidance grounded in gospel texts."
+  agent: assurance_shepherd
+
+berean_validate_task:
+  description: >
+    Review the draft against Scripture set + context. Return JSON verdict & fixes.
+  expected_output: |
+    {"ok":true,"issues":[],"add_refs":[],"suggested_edits":""}
+  agent: berean_validator
+
+final_edit_task:
+  description: >
+    Apply validator suggestions, tighten prose, keep warmth & citations, produce final Markdown.
+  expected_output: "Clean, pastoral final message."
+  agent: final_editor
+
+# 2) Compose tasks (Phase 2) — these are what agent_handler.py calls
+compose_teaching_answer:
+  description: >
+    User asked: "{prompt}"
+
+    Context:
+    - Router summary: {router_summary}
+    - Prior conversation (may be empty): {conversation}
+    - User profile (may be empty): {user_profile}
+    - Memories (may be empty): {memories}
+
+    Write a **concise** biblical teaching that directly answers the question.
+    - Start with a 1–2 sentence thesis that plainly answers.
+    - Then give 2–3 tightly relevant passages (book chapter:verse, quoted briefly or referenced).
+    - Explain briefly how those passages answer the question.
+    - Avoid long surveys or rabbit trails. No generic filler. No hedging.
+    - Target length: {desired_length} (short ≈120–180 words; standard ≈250–350).
+
+  expected_output: >
+    ## Answer (1–2 sentence thesis)
+    [plain answer]
+
+    ## Scripture
+    - [Ref 1]: [1–2 line tie-in]
+    - [Ref 2]: [1–2 line tie-in]
+    - [Optional Ref 3]: [1–2 line tie-in]
+
+    ## Why it matters
+    [2–4 crisp lines applying the teaching]
+  agent: doctrine_teacher
+
+compose_pastoral_answer:
+  description: >
+    User said: "{prompt}"
+
+    Context:
+    - Router summary: {router_summary}
+    - Prior conversation: {conversation}
+    - User profile: {user_profile}
+    - Memories: {memories}
+
+    Offer pastoral counsel **rooted in Scripture**. Be specific and kind.
+    - Start with 1–2 lines that show you heard their situation.
+    - Give 1–2 passages that speak into it (short quote or reference).
+    - Offer 3–5 specific next steps (prayer, boundaries, community, practical care).
+    - No clichés. No over-promising. Be honest about process and grace.
+    - Target length: {desired_length}.
+
+  expected_output: >
+    ## I hear you
+    [1–2 lines]
+
+    ## Scripture to stand on
+    - [Ref 1]: [short tie-in]
+    - [Ref 2]: [short tie-in]
+
+    ## Next steps
+    - [Action 1]
+    - [Action 2]
+    - [Action 3]
+    - [Action 4]
+    - [Action 5]
+
+    ## Closing
+    [1–2 lines of hope grounded in God’s character]
+  agent: pastoral_counselor
+
+compose_assurance_answer:
+  description: >
+    User said: "{prompt}"
+
+    Context:
+    - Router summary: {router_summary}
+    - Prior conversation: {conversation}
+    - User profile: {user_profile}
+    - Memories: {memories}
+
+    Provide assurance **or** loving correction about salvation and discipleship,
+    anchored in the gospel (e.g., John 3, Romans 5–8, Ephesians 2).
+    - Clarify the gospel plainly.
+    - State what the Bible says about assurance, repentance, obedience.
+    - One paragraph of pastoral clarity; not harsh, not vague.
+    - Include 2–3 references; short quotes or references are fine.
+    - Target length: {desired_length}.
+
+  expected_output: >
+    ## The gospel
+    [one concise paragraph]
+
+    ## Assurance & obedience
+    [2–4 lines with refs]
+
+    ## Scriptures
+    - [Ref 1]
+    - [Ref 2]
+    - [Optional Ref 3]
+  agent: assurance_shepherd

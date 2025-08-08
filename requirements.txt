@@ -1,0 +1,15 @@
+elasticsearch
+crewai
+python-dotenv
+fastapi
+uvicorn[standard]
+motor
+pymongo
+passlib[bcrypt]
+python-jose[cryptography]
+stripe
+httpx
+email-validator
+requests
+gunicorn
+python-multipart
