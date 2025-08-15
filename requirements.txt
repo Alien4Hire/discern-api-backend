@@ -13,3 +13,5 @@ email-validator
 requests
 gunicorn
 python-multipart
+google-auth
+httpx

@@ -19,7 +19,7 @@ logger = logging.getLogger("auth")
 logger.setLevel(logging.INFO)
 
 # must match your real sign-in path
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/sign-in")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # read env
 JWT_SECRET = os.getenv("JWT_SECRET")

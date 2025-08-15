@@ -1,19 +1,23 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, Dimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import * as WebBrowser from 'expo-web-browser';
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+WebBrowser.maybeCompleteAuthSession();
 
 type Props = {
     onPress: () => void;
     disabled?: boolean;
+    busy?: boolean;
 };
 
-export default function GoogleSignInButton({ onPress, disabled }: Props) {
+export default function GoogleSignInButton({ onPress, disabled, busy }: Props) {
     return (
         <View style={styles.wrapper}>
             <TouchableOpacity
-                onPress={onPress}
+                onPress={() => onPress()}
                 disabled={disabled}
                 activeOpacity={0.85}
                 style={[styles.button, disabled && styles.buttonDisabled]}
@@ -32,7 +36,7 @@ export default function GoogleSignInButton({ onPress, disabled }: Props) {
                     </View>
 
                     {/* Text */}
-                    <Text style={styles.buttonText}>Sign in with Google</Text>
+                    <Text style={styles.buttonText}>{busy ? "Signing in…" : "Sign in with Google"}</Text>
 
                     {/* Spacer to balance icon */}
                     <View style={styles.iconSpacer} />

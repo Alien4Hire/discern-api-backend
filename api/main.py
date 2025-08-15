@@ -1,15 +1,21 @@
 # main.py
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
+import os
 
-from api.routes import auth, agent, subscription, user, scripture, health
+from api.routes import auth, agent, auth_google, auth_dev, subscription, user, scripture, health
 from dotenv import load_dotenv
 
 load_dotenv()
 app = FastAPI()
 
+APP_ENV = os.getenv("APP_ENV", "development")
+
 # Include routers
 app.include_router(auth.router, tags=["Auth"])
+app.include_router(auth_google.router, tags=["Auth - Google"])
+if APP_ENV == "development":
+    app.include_router(auth_dev.router, tags=["Auth - Dev"])
 app.include_router(user.router, tags=["User"])
 app.include_router(agent.router, tags=["Agent"])
 app.include_router(subscription.router, tags=["Subscription"])

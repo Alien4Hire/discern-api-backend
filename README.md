@@ -64,7 +64,7 @@ OpenAPI/Swagger docs are at:
 
 ## Example API Flow
 
-1. **Sign Up or Sign In** using `/auth/create-account` or `/auth/sign-in`
+1. **Sign Up or Sign In** using `/auth/create-account` or `/auth/login`
 2. **Send Messages** to AI via `/agent/send-message`
 3. **Search Scripture** with `/scripture/search`
 4. **Manage Subscription** using `/subscription` endpoints

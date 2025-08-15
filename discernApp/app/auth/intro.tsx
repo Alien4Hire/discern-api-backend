@@ -2,28 +2,47 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image, Linking } from "react-native";
 import { router } from "expo-router";
 import GoogleSignInButton from "../../components/Button/GoogleSignInButton";
+import { authStore } from "../../stores/auth";
+import { useGoogleIdTokenAuth } from "../../hooks/useGoogleAuth";
+
+const IS_DEV = __DEV__ || process.env.EXPO_PUBLIC_ENV === "development";
 
 export default function Intro() {
-    const handleGoogleSignIn = () => {
-        console.log("Google Sign-In pressed");
-        // TODO: implement real sign-in logic
-    };
+    const loginWithGoogle = authStore((s) => s.loginWithGoogle);
+    const busy = authStore((s) => s.loading);
+    const loginDev = authStore((s) => s.loginDev);
+
+    // Builds the Google auth hook
+    const { promptAsync } = useGoogleIdTokenAuth(async (idToken) => {
+        await loginWithGoogle(idToken);
+        router.replace("/chat");
+    });
+
+    // Implements anonymous continue
     const handleContinue = () => {
-        // go to chat (tabs or a dedicated chat stack)
         router.replace("/chat");
     };
 
+    // Implements dev login handler
+    const handleDevLogin = async () => {
+        await loginDev("unsubscribed@example.com");
+        router.replace("/chat");
+    };
+
+    // Renders the screen
     return (
         <View style={styles.container}>
             <View style={styles.logoContainer}>
-                <Image source={require("../../assets/images/discern-logo.png")} style={styles.logo} resizeMode="contain" />
+                <Image
+                    source={require("../../assets/images/discern-logo.png")}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
             </View>
 
             <Text style={styles.heading}>
-                Ask anything.{"\n"}
-                Let the Bible speak.
+                Ask anything.{"\n"}Let the Bible speak.
             </Text>
-
             <Text style={styles.subheading}>AI built this to reflect God, not replace Him.</Text>
 
             <View style={styles.valueBox}>
@@ -38,7 +57,13 @@ export default function Intro() {
                 <Text style={styles.secondaryText}>Continue without an account</Text>
             </TouchableOpacity>
 
-            <GoogleSignInButton onPress={handleGoogleSignIn} />
+            <GoogleSignInButton onPress={() => promptAsync()} disabled={busy} busy={busy} />
+
+            {IS_DEV && (
+                <TouchableOpacity style={[styles.secondaryButton, { marginTop: 12 }]} onPress={handleDevLogin}>
+                    <Text style={styles.secondaryText}>Dev login: unsubscribed@example.com</Text>
+                </TouchableOpacity>
+            )}
 
             <Text style={styles.privacy}>
                 We respect your privacy…{" "}
@@ -55,15 +80,34 @@ export default function Intro() {
     );
 }
 
+// Defines styles
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#1f1d1e", alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
+    container: {
+        flex: 1,
+        backgroundColor: "#1f1d1e",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 24,
+    },
     logoContainer: { alignSelf: "flex-start", marginTop: 40 },
     logo: { width: 200, height: 200 },
-    heading: { color: "white", fontSize: 40, textAlign: "left", fontWeight: "bold", marginBottom: 10 },
+    heading: {
+        color: "white",
+        fontSize: 40,
+        textAlign: "left",
+        fontWeight: "bold",
+        marginBottom: 10,
+    },
     subheading: { color: "#CCC", fontSize: 16, textAlign: "center" },
     secondaryButton: { marginBottom: 16 },
     secondaryText: { color: "white", fontSize: 16 },
-    privacy: { color: "#888", fontSize: 12, textAlign: "center", marginTop: 40, lineHeight: 18 },
+    privacy: {
+        color: "#888",
+        fontSize: 12,
+        textAlign: "center",
+        marginTop: 40,
+        lineHeight: 18,
+    },
     link: { textDecorationLine: "underline", color: "#aaa" },
     valueBox: {
         backgroundColor: "#2a2829",
